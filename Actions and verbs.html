@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portuguese Sphere - Enhanced</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        #recenter-button {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            padding: 0;
+            background: transparent;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            z-index: 100;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+        
+        #recenter-button:hover {
+            color: #ccc;
+            transform: translateY(-1px);
+        }
+
+        #recenter-button:active {
+            transform: translateY(0);
+        }
+
+        #word-counter {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            padding: 0;
+            background: transparent;
+            color: #fff;
+            z-index: 100;
+            font-size: 14px;
+            font-weight: 500;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        #search-container {
+            position: absolute;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            width: 320px;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: transparent;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 400;
+            outline: none;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        #search-input:focus {
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+
+        #search-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        #suggestions {
+            position: absolute;
+            top: 52px;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        #suggestions.active {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .suggestion-word {
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 2px;
+        }
+
+        .suggestion-def {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .label {
+            margin-top: -1em;
+            padding: 6px 12px;
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 400;
+            transition: transform 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+            user-select: none;
+            backdrop-filter: blur(8px);
+            will-change: transform, opacity;
+        }
+        
+        .label:hover {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+        }
+        
+        .label.active-word {
+            border-color: #666;
+            background: #666;
+            color: #fff;
+            transform: scale(1.15);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        .definition-panel {
+            padding: 20px;
+            width: 240px;
+            min-height: 60px;
+            background: rgba(255, 255, 255, 0.98);
+            color: #000;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+            text-align: left;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            backdrop-filter: blur(10px);
+        }
+        
+        .definition-panel h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            letter-spacing: -0.02em;
+        }
+        
+        .definition-panel p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #4a4a4a;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="word-counter">200 words</div>
+    
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Search Portuguese words...">
+        <div id="suggestions"></div>
+    </div>
+    
+    <button id="recenter-button">Recenter View</button>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // Configuration
+        const CONFIG = {
+            sphere: {
+                radius: 2,
+                segments: 32, // Reduced from 64 for better performance
+                outlineScale: 1.02
+            },
+            camera: {
+                fov: 75,
+                initialDistance: 5,
+                minDistance: 2.5,
+                maxDistance: 10
+            },
+            controls: {
+                dampingFactor: 0.05 // Slightly more responsive
+            },
+            occlusion: {
+                updateInterval: 150, // Less frequent updates
+                threshold: 0.1,
+                minOpacity: 0.05,
+                batchSize: 50 // Process labels in batches
+            },
+            definition: {
+                offset: new THREE.Vector3(1.0, 0, 0),
+                fadeDelay: 50
+            }
+        };
+
+        // State management
+        const state = {
+            lastOcclusionUpdate: 0,
+            currentDefinition: {
+                label: null,
+                line: null,
+                wordElement: null
+            }
+        };
+
+        // Data
+        const dictionary = [
+            { word: "Ser", def: "To be (permanent)." },
+            { word: "Estar", def: "To be (temporary)." },
+            { word: "Ter", def: "To have." },
+            { word: "Fazer", def: "To do or make." },
+            { word: "Ir", def: "To go." },
+            { word: "Vir", def: "To come." },
+            { word: "Ver", def: "To see." },
+            { word: "Olhar", def: "To look." },
+            { word: "Observar", def: "To observe." },
+            { word: "Assistir", def: "To watch." },
+            { word: "Ouvir", def: "To hear." },
+            { word: "Escutar", def: "To listen." },
+            { word: "Falar", def: "To speak." },
+            { word: "Dizer", def: "To say." },
+            { word: "Contar", def: "To tell or count." },
+            { word: "Perguntar", def: "To ask." },
+            { word: "Responder", def: "To answer." },
+            { word: "Gritar", def: "To shout." },
+            { word: "Sussurrar", def: "To whisper." },
+            { word: "Cantar", def: "To sing." },
+            { word: "Rir", def: "To laugh." },
+            { word: "Chorar", def: "To cry." },
+            { word: "Sorrir", def: "To smile." },
+            { word: "Pensar", def: "To think." },
+            { word: "Saber", def: "To know (facts)." },
+            { word: "Conhecer", def: "To know (people/places)." },
+            { word: "Aprender", def: "To learn." },
+            { word: "Ensinar", def: "To teach." },
+            { word: "Estudar", def: "To study." },
+            { word: "Ler", def: "To read." },
+            { word: "Escrever", def: "To write." },
+            { word: "Desenhar", def: "To draw." },
+            { word: "Pintar", def: "To paint." },
+            { word: "Criar", def: "To create." },
+            { word: "Inventar", def: "To invent." },
+            { word: "Imaginar", def: "To imagine." },
+            { word: "Sonhar", def: "To dream." },
+            { word: "Lembrar", def: "To remember." },
+            { word: "Esquecer", def: "To forget." },
+            { word: "Entender", def: "To understand." },
+            { word: "Compreender", def: "To comprehend." },
+            { word: "Explicar", def: "To explain." },
+            { word: "Descrever", def: "To describe." },
+            { word: "Narrar", def: "To narrate." },
+            { word: "Relatar", def: "To report." },
+            { word: "Andar", def: "To walk." },
+            { word: "Caminhar", def: "To walk (formal)." },
+            { word: "Correr", def: "To run." },
+            { word: "Saltar", def: "To jump." },
+            { word: "Pular", def: "To jump (Brazilian)." },
+            { word: "Dançar", def: "To dance." },
+            { word: "Nadar", def: "To swim." },
+            { word: "Mergulhar", def: "To dive." },
+            { word: "Voar", def: "To fly." },
+            { word: "Cair", def: "To fall." },
+            { word: "Subir", def: "To climb or go up." },
+            { word: "Descer", def: "To descend or go down." },
+            { word: "Entrar", def: "To enter." },
+            { word: "Sair", def: "To exit or leave." },
+            { word: "Chegar", def: "To arrive." },
+            { word: "Partir", def: "To depart." },
+            { word: "Viajar", def: "To travel." },
+            { word: "Voltar", def: "To return." },
+            { word: "Ficar", def: "To stay or become." },
+            { word: "Morar", def: "To live (reside)." },
+            { word: "Habitar", def: "To inhabit." },
+            { word: "Viver", def: "To live." },
+            { word: "Existir", def: "To exist." },
+            { word: "Morrer", def: "To die." },
+            { word: "Nascer", def: "To be born." },
+            { word: "Crescer", def: "To grow." },
+            { word: "Envelhecer", def: "To age." },
+            { word: "Mudar", def: "To change." },
+            { word: "Transformar", def: "To transform." },
+            { word: "Desenvolver", def: "To develop." },
+            { word: "Evoluir", def: "To evolve." },
+            { word: "Progredir", def: "To progress." },
+            { word: "Melhorar", def: "To improve." },
+            { word: "Piorar", def: "To worsen." },
+            { word: "Começar", def: "To begin." },
+            { word: "Iniciar", def: "To initiate." },
+            { word: "Terminar", def: "To finish." },
+            { word: "Acabar", def: "To end." },
+            { word: "Parar", def: "To stop." },
+            { word: "Continuar", def: "To continue." },
+            { word: "Seguir", def: "To follow." },
+            { word: "Perseguir", def: "To chase or pursue." },
+            { word: "Fugir", def: "To flee." },
+            { word: "Escapar", def: "To escape." },
+            { word: "Procurar", def: "To search for." },
+            { word: "Buscar", def: "To seek." },
+            { word: "Encontrar", def: "To find or meet." },
+            { word: "Descobrir", def: "To discover." },
+            { word: "Perder", def: "To lose." },
+            { word: "Ganhar", def: "To win or earn." },
+            { word: "Vencer", def: "To defeat or overcome." },
+            { word: "Lutar", def: "To fight." },
+            { word: "Batalhar", def: "To battle." },
+            { word: "Guerrear", def: "To wage war." },
+            { word: "Atacar", def: "To attack." },
+            { word: "Defender", def: "To defend." },
+            { word: "Proteger", def: "To protect." },
+            { word: "Guardar", def: "To keep or guard." },
+            { word: "Salvar", def: "To save." },
+            { word: "Resgatar", def: "To rescue." },
+            { word: "Ajudar", def: "To help." },
+            { word: "Auxiliar", def: "To assist." },
+            { word: "Apoiar", def: "To support." },
+            { word: "Colaborar", def: "To collaborate." },
+            { word: "Cooperar", def: "To cooperate." },
+            { word: "Trabalhar", def: "To work." },
+            { word: "Descansar", def: "To rest." },
+            { word: "Dormir", def: "To sleep." },
+            { word: "Acordar", def: "To wake up." },
+            { word: "Levantar", def: "To get up or raise." },
+            { word: "Sentar", def: "To sit." },
+            { word: "Deitar", def: "To lie down." },
+            { word: "Abraçar", def: "To hug." },
+            { word: "Beijar", def: "To kiss." },
+            { word: "Amar", def: "To love." },
+            { word: "Gostar", def: "To like." },
+            { word: "Adorar", def: "To adore." },
+            { word: "Odiar", def: "To hate." },
+            { word: "Detestar", def: "To detest." },
+            { word: "Preferir", def: "To prefer." },
+            { word: "Escolher", def: "To choose." },
+            { word: "Decidir", def: "To decide." },
+            { word: "Querer", def: "To want." },
+            { word: "Desejar", def: "To desire or wish." },
+            { word: "Esperar", def: "To wait or hope." },
+            { word: "Precisar", def: "To need." },
+            { word: "Necessitar", def: "To necessitate." },
+            { word: "Poder", def: "To be able to." },
+            { word: "Dever", def: "To must or owe." },
+            { word: "Permitir", def: "To permit." },
+            { word: "Proibir", def: "To prohibit." },
+            { word: "Mandar", def: "To command or send." },
+            { word: "Ordenar", def: "To order." },
+            { word: "Obedecer", def: "To obey." },
+            { word: "Desobedecer", def: "To disobey." },
+            { word: "Comer", def: "To eat." },
+            { word: "Beber", def: "To drink." },
+            { word: "Engolir", def: "To swallow." },
+            { word: "Mastigar", def: "To chew." },
+            { word: "Cozinhar", def: "To cook." },
+            { word: "Assar", def: "To roast or bake." },
+            { word: "Fritar", def: "To fry." },
+            { word: "Ferver", def: "To boil." },
+            { word: "Cortar", def: "To cut." },
+        ];
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+
+        const camera = new THREE.PerspectiveCamera(
+            CONFIG.camera.fov,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.z = CONFIG.camera.initialDistance;
+
+        // Renderers
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: true,
+            powerPreference: "high-performance"
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2x for performance
+        document.body.appendChild(renderer.domElement);
+
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+
+        // Controls
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = CONFIG.controls.dampingFactor;
+        controls.minDistance = CONFIG.camera.minDistance;
+        controls.maxDistance = CONFIG.camera.maxDistance;
+
+        // Sphere geometry
+        const sphereGeometry = new THREE.SphereGeometry(
+            CONFIG.sphere.radius,
+            CONFIG.sphere.segments,
+            CONFIG.sphere.segments
+        );
+
+        const mainSphere = new THREE.Mesh(
+            sphereGeometry,
+            new THREE.MeshBasicMaterial({ color: 0x000000 })
+        );
+        scene.add(mainSphere);
+
+        const outlineSphere = new THREE.Mesh(
+            sphereGeometry,
+            new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide })
+        );
+        outlineSphere.scale.setScalar(CONFIG.sphere.outlineScale);
+        scene.add(outlineSphere);
+
+        // Utilities
+        const raycaster = new THREE.Raycaster();
+        const labelObjects = [];
+
+        // Fibonacci sphere point calculation
+        function getFibonacciSpherePoint(index, total, radius) {
+            const goldenRatio = (1 + Math.sqrt(5)) / 2;
+            const theta = 2 * Math.PI * index / goldenRatio;
+            const phi = Math.acos(1 - 2 * (index + 0.5) / total);
+
+            return new THREE.Vector3(
+                radius * Math.cos(theta) * Math.sin(phi),
+                radius * Math.sin(theta) * Math.sin(phi),
+                radius * Math.cos(phi)
+            );
+        }
+
+        // Clear current definition
+        function clearDefinition() {
+            const { label, line, wordElement } = state.currentDefinition;
+
+            if (label) {
+                scene.remove(label);
+                label.element.remove();
+                state.currentDefinition.label = null;
+            }
+
+            if (line) {
+                scene.remove(line);
+                line.geometry.dispose();
+                line.material.dispose();
+                state.currentDefinition.line = null;
+            }
+
+            if (wordElement) {
+                wordElement.classList.remove('active-word');
+                state.currentDefinition.wordElement = null;
+            }
+        }
+
+        // Show definition panel
+        function showDefinition(position, word, definition, element) {
+            clearDefinition();
+
+            // Create definition panel
+            const panel = document.createElement('div');
+            panel.className = 'definition-panel';
+            panel.innerHTML = `<h3>${word}</h3><p>${definition}</p>`;
+
+            const defLabel = new CSS2DObject(panel);
+            
+            // Calculate better position for definition based on camera angle
+            const toCam = camera.position.clone().sub(position).normalize();
+            const offset = toCam.clone().multiplyScalar(1.5); // Push towards camera
+            const defPosition = position.clone().add(offset);
+            
+            defLabel.position.copy(defPosition);
+            scene.add(defLabel);
+
+            // Create connecting line with better positioning
+            const lineMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            // Offset the line slightly from the word position to make it more visible
+            const lineStart = position.clone().add(toCam.clone().multiplyScalar(0.1));
+            const points = [lineStart, defPosition.clone()];
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+
+            // Update state
+            state.currentDefinition.label = defLabel;
+            state.currentDefinition.line = line;
+            state.currentDefinition.wordElement = element;
+            element.classList.add('active-word');
+
+            // Fade in
+            setTimeout(() => panel.style.opacity = '1', CONFIG.definition.fadeDelay);
+        }
+
+        // Create word labels
+        dictionary.forEach((item, index) => {
+            const element = document.createElement('div');
+            element.className = 'label';
+            element.textContent = item.word;
+            element.style.pointerEvents = 'auto';
+
+            const position = getFibonacciSpherePoint(index, dictionary.length, CONFIG.sphere.radius);
+
+            element.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showDefinition(position, item.word, item.def, element);
+            });
+
+            const label = new CSS2DObject(element);
+            label.position.copy(position);
+            scene.add(label);
+
+            labelObjects.push({ 
+                object: label, 
+                element, 
+                position,
+                word: item.word,
+                def: item.def
+            });
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('search-input');
+        const suggestionsBox = document.getElementById('suggestions');
+
+        function updateSuggestions(query) {
+            if (!query.trim()) {
+                suggestionsBox.classList.remove('active');
+                return;
+            }
+
+            const matches = dictionary.filter(item => 
+                item.word.toLowerCase().includes(query.toLowerCase()) ||
+                item.def.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 8); // Limit to 8 suggestions
+
+            if (matches.length === 0) {
+                suggestionsBox.classList.remove('active');
+                return;
+            }
+
+            suggestionsBox.innerHTML = matches.map(item => `
+                <div class="suggestion-item" data-word="${item.word}">
+                    <div class="suggestion-word">${item.word}</div>
+                    <div class="suggestion-def">${item.def}</div>
+                </div>
+            `).join('');
+
+            suggestionsBox.classList.add('active');
+
+            // Add click handlers to suggestions
+            suggestionsBox.querySelectorAll('.suggestion-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const word = el.dataset.word;
+                    const labelObj = labelObjects.find(obj => obj.word === word);
+                    if (labelObj) {
+                        showDefinition(labelObj.position, labelObj.word, labelObj.def, labelObj.element);
+                        
+                        // Rotate camera to face the word
+                        const direction = labelObj.position.clone().normalize();
+                        const distance = camera.position.length();
+                        camera.position.copy(direction.multiplyScalar(-distance));
+                        controls.target.set(0, 0, 0);
+                        controls.update();
+                    }
+                    searchInput.value = '';
+                    suggestionsBox.classList.remove('active');
+                });
+            });
+        }
+
+        searchInput.addEventListener('input', (e) => {
+            updateSuggestions(e.target.value);
+        });
+
+        searchInput.addEventListener('blur', () => {
+            // Delay to allow click on suggestion
+            setTimeout(() => suggestionsBox.classList.remove('active'), 200);
+        });
+
+        // Update word counter
+        document.getElementById('word-counter').textContent = `${dictionary.length} words`;
+
+        // Recenter camera
+        function recenter() {
+            camera.position.set(0, 0, CONFIG.camera.initialDistance);
+            controls.target.set(0, 0, 0);
+            controls.update();
+            clearDefinition();
+        }
+
+        // Update label visibility based on occlusion (optimized with depth of field)
+        let occlusionBatchIndex = 0;
+        function updateOcclusion() {
+            let activeWordObscured = false;
+            
+            // Process labels in batches for better performance
+            const batchSize = CONFIG.occlusion.batchSize;
+            const startIdx = occlusionBatchIndex;
+            const endIdx = Math.min(startIdx + batchSize, labelObjects.length);
+
+            for (let i = startIdx; i < endIdx; i++) {
+                const { element, position } = labelObjects[i];
+                
+                const direction = position.clone().sub(camera.position).normalize();
+                raycaster.set(camera.position, direction);
+
+                const intersects = raycaster.intersectObject(mainSphere, false);
+                const distToLabel = camera.position.distanceTo(position);
+                
+                const isVisible = intersects.length === 0 || 
+                    intersects[0].distance >= distToLabel - CONFIG.occlusion.threshold;
+
+                // Calculate depth of field effect based on angle from camera center
+                const viewDirection = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+                const toLabel = position.clone().sub(camera.position).normalize();
+                const angle = viewDirection.angleTo(toLabel);
+                
+                // Create depth falloff: words at edges fade and blur
+                const maxAngle = Math.PI / 3; // 60 degrees
+                const depthFactor = Math.max(0, 1 - (angle / maxAngle));
+                const finalOpacity = isVisible ? depthFactor : CONFIG.occlusion.minOpacity;
+                
+                // Apply blur effect for depth
+                const blurAmount = (1 - depthFactor) * 3;
+                
+                // Only update DOM if changed
+                const newOpacity = String(finalOpacity);
+                if (element.style.opacity !== newOpacity) {
+                    element.style.opacity = newOpacity;
+                    element.style.filter = `blur(${blurAmount}px)`;
+                    element.style.pointerEvents = finalOpacity > 0.3 ? 'auto' : 'none';
+                }
+
+                if (element === state.currentDefinition.wordElement && !isVisible) {
+                    activeWordObscured = true;
+                }
+            }
+
+            // Move to next batch
+            occlusionBatchIndex = endIdx >= labelObjects.length ? 0 : endIdx;
+
+            if (activeWordObscured) {
+                clearDefinition();
+            }
+        }
+
+        // Animation loop
+        function animate(time) {
+            requestAnimationFrame(animate);
+            controls.update();
+
+            if (time - state.lastOcclusionUpdate > CONFIG.occlusion.updateInterval) {
+                state.lastOcclusionUpdate = time;
+                updateOcclusion();
+            }
+
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+
+        // Event listeners
+        document.getElementById('recenter-button').addEventListener('click', recenter);
+        
+        // DON'T clear definition when rotating - only when selecting a new word or word goes off-screen
+        // Removed: controls.addEventListener('start', clearDefinition);
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate(0);
+    </script>
+</body>
+</html>
